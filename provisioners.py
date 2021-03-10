@@ -15,11 +15,12 @@ import hashlib
 
 
 def sha256sum(filename):
-    h  = hashlib.sha256()
-    with open(filename, 'rb') as f:
+    h = hashlib.sha256()
+    with open(filename, "rb") as f:
         data = f.read()
         h.update(data)
     return h.hexdigest()
+
 
 # ConnectionArgs tells a provisioner how to access a remote resource. It includes the hostname
 # and optional port (default is 22), username, password, and private key information.
@@ -37,21 +38,24 @@ class ConnectionArgs(TypedDict):
     private_key_passphrase: Optional[pulumi.Input[str]] = None
     """The private key passphrase, if any, to use for the SSH private key."""
 
+
 def connect(conn: ConnectionArgs) -> paramiko.SSHClient:
     ssh = paramiko.SSHClient()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    skey = io.StringIO(conn['private_key'])
-    pkey = paramiko.RSAKey.from_private_key(skey, password=conn.get('private_key_passphrase'))
+    skey = io.StringIO(conn["private_key"])
+    pkey = paramiko.RSAKey.from_private_key(
+        skey, password=conn.get("private_key_passphrase")
+    )
 
     # Retry the connection until the endpoint is available (up to 2 minutes).
     retries = 0
     while True:
         try:
             ssh.connect(
-                hostname=conn['host'],
-                port=conn.get('port') or 22,
-                username=conn.get('username'),
-                password=conn.get('password'),
+                hostname=conn["host"],
+                port=conn.get("port") or 22,
+                username=conn.get("username"),
+                password=conn.get("password"),
                 pkey=pkey,
             )
             return ssh
@@ -61,6 +65,7 @@ def connect(conn: ConnectionArgs) -> paramiko.SSHClient:
             time.sleep(5)
             retries = retries + 1
             pass
+
 
 class ProvisionerProvider(dynamic.ResourceProvider):
     __metaclass__ = abc.ABCMeta
@@ -88,24 +93,34 @@ class ProvisionerProvider(dynamic.ResourceProvider):
             if key not in olds:
                 diffs.append(key)
 
-        return dynamic.DiffResult(changes=len(diffs) > 0, replaces=diffs, delete_before_replace=True)
+        return dynamic.DiffResult(
+            changes=len(diffs) > 0, replaces=diffs, delete_before_replace=True
+        )
+
 
 # CopyFileProvider implements the resource lifecycle for the CopyFile resource type below.
 class CopyFileProvider(ProvisionerProvider):
     def on_create(self, inputs: Any) -> Any:
-        ssh = connect(inputs['conn'])
+        ssh = connect(inputs["conn"])
         scp = ssh.open_sftp()
         try:
-            scp.put(inputs['src'], inputs['dest'])
+            scp.put(inputs["src"], inputs["dest"])
         finally:
             scp.close()
             ssh.close()
         return inputs
 
+
 # CopyFile is a provisioner step that can copy a file over an SSH connection.
 class CopyFile(dynamic.Resource):
-    def __init__(self, name: str, conn: pulumi.Input[ConnectionArgs],
-                 src: str, dest: str, opts: Optional[pulumi.ResourceOptions] = None):
+    def __init__(
+        self,
+        name: str,
+        conn: pulumi.Input[ConnectionArgs],
+        src: str,
+        dest: str,
+        opts: Optional[pulumi.ResourceOptions] = None,
+    ):
         self.conn = conn
         """conn contains information on how to connect to the destination, in addition to dependency information."""
         self.src = src
@@ -120,14 +135,15 @@ class CopyFile(dynamic.Resource):
             CopyFileProvider(),
             name,
             {
-                'dep': conn,
-                'conn': conn,
-                'src': src,
-                'dest': dest,
-                'fileHash': sha256sum(src),
+                "dep": conn,
+                "conn": conn,
+                "src": src,
+                "dest": dest,
+                "fileHash": sha256sum(src),
             },
             opts,
         )
+
 
 # RunCommandResult is the result of running a command.
 class RunCommandResult(TypedDict):
@@ -136,30 +152,40 @@ class RunCommandResult(TypedDict):
     stderr: str
     """The stderr of the command that was executed."""
 
+
 # RemoteExecProvider implements the resource lifecycle for the RemoteExec resource type below.
 class RemoteExecProvider(ProvisionerProvider):
     def on_create(self, inputs: Any) -> Any:
-        ssh = connect(inputs['conn'])
+        ssh = connect(inputs["conn"])
         try:
             results = []
-            for command in inputs['commands']:
+            for command in inputs["commands"]:
                 stdin, stdout, stderr = ssh.exec_command(command)
-                results.append({
-                    'stdout': ''.join(stdout.readlines()),
-                    'stderr': ''.join(stderr.readlines()),
-                })
-            inputs['results'] = results
-            print(f'results: {results}')
+                results.append(
+                    {
+                        "stdout": "".join(stdout.readlines()),
+                        "stderr": "".join(stderr.readlines()),
+                    }
+                )
+            inputs["results"] = results
+            print(f"results: {results}")
         finally:
             ssh.close()
         return inputs
+
 
 # RemoteExec runs remote one or more commands over an SSH connection. It returns the resulting
 # stdout and stderr from the commands in the results property.
 class RemoteExec(dynamic.Resource):
     results: pulumi.Output[list]
 
-    def __init__(self, name: str, conn: ConnectionArgs, commands: list, opts: Optional[pulumi.ResourceOptions] = None):
+    def __init__(
+        self,
+        name: str,
+        conn: ConnectionArgs,
+        commands: list,
+        opts: Optional[pulumi.ResourceOptions] = None,
+    ):
         self.conn = conn
         """conn contains information on how to connect to the destination, in addition to dependency information."""
         self.commands = commands
@@ -171,9 +197,9 @@ class RemoteExec(dynamic.Resource):
             RemoteExecProvider(),
             name,
             {
-                'conn': conn,
-                'commands': commands,
-                'results': None,
+                "conn": conn,
+                "commands": commands,
+                "results": None,
             },
             opts,
         )
