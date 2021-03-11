@@ -1,3 +1,9 @@
+<a href="https://gitmoji.dev">
+  <img src="https://img.shields.io/badge/gitmoji-%20😜%20😍-FFDD67.svg?style=flat-square" alt="Gitmoji">
+</a>
+
+[![Deploy](https://get.pulumi.com/new/button.svg)](https://app.pulumi.com/new?template=https://github.com/BbrSofiane/openedx-server-aws)
+
 # openedx-server-aws
 
 # TODO Add deploy with pulumi button
