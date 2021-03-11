@@ -41,7 +41,7 @@ ami = ec2.get_ami(
 
 # Create a security group
 security_group = ec2.SecurityGroup(
-    f"openedx-sg",
+    "openedx-sg",
     description="Basic Open edX security group",
     egress=[
         ec2.SecurityGroupEgressArgs(
@@ -89,7 +89,7 @@ if key_name is None:
     key_name = key.key_name
 
 openedx_instance = ec2.Instance(
-    f"openedx-instance",
+    "openedx-instance",
     instance_type=size,
     vpc_security_group_ids=[security_group.id],
     # user_data=user_data,
