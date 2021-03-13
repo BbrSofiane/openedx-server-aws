@@ -66,12 +66,6 @@ security_group = ec2.SecurityGroup(
         ),
         ec2.SecurityGroupIngressArgs(
             protocol=ec2.ProtocolType.TCP,
-            from_port=443,
-            to_port=443,
-            cidr_blocks=["0.0.0.0/0"],
-        ),
-        ec2.SecurityGroupIngressArgs(
-            protocol=ec2.ProtocolType.TCP,
             from_port=18000,
             to_port=18999,
             cidr_blocks=["0.0.0.0/0"],
@@ -79,10 +73,6 @@ security_group = ec2.SecurityGroup(
     ],
     tags={**tags, "Name": "Open edX"},
 )
-
-# Create an EC2 instance
-with open("config.sh") as f:
-    user_data = f.read()
 
 if key_name is None:
     key = ec2.KeyPair("openedx-key", public_key=public_key)
@@ -92,7 +82,6 @@ openedx_instance = ec2.Instance(
     "openedx-instance",
     instance_type=size,
     vpc_security_group_ids=[security_group.id],
-    # user_data=user_data,
     ami=ami.id,
     key_name=key_name,
     root_block_device=ec2.InstanceRootBlockDeviceArgs(
