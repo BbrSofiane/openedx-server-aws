@@ -3,7 +3,7 @@ Open edX Instance deployment and provision.
 
 """
 
-from pulumi import export, Config, ResourceOptions
+from pulumi import export, Config, ResourceOptions, get_stack
 from pulumi_aws import ec2, iam, GetAmiFilterArgs
 
 import provisioners
@@ -15,6 +15,7 @@ def decode_key(key):
     return key.encode("ascii")
 
 
+stack = get_stack()
 config = Config()
 
 key_name = config.get("keyName")
@@ -24,9 +25,10 @@ private_key = config.require_secret("privateKey").apply(decode_key)
 private_key_passphrase = config.get_secret("privateKeyPassphrase")
 
 tags = {"pulumi_managed": "true", "auto_off": "true"}
-size = "t2.large"
+size = "t3a.large"
 
-OPENEDX_RELEASE = "open-release/koa.master"
+# TODO make this a config variable
+OPENEDX_RELEASE = "open-release/lilac.master"
 
 ami = ec2.get_ami(
     most_recent=True,
@@ -71,15 +73,17 @@ security_group = ec2.SecurityGroup(
             cidr_blocks=["0.0.0.0/0"],
         ),
     ],
-    tags={**tags, "Name": "Open edX"},
+    tags={**tags, "Name": f"Open edX {stack}"},
 )
 
 if key_name is None:
     key = ec2.KeyPair("openedx-key", public_key=public_key)
     key_name = key.key_name
 
-openedx_instance = ec2.Instance(
+# TODO Make the spot price a config variable
+openedx_instance = ec2.SpotInstanceRequest(
     "openedx-instance",
+    spot_price="0.03",
     instance_type=size,
     vpc_security_group_ids=[security_group.id],
     ami=ami.id,
@@ -89,7 +93,7 @@ openedx_instance = ec2.Instance(
         volume_size=50,
         encrypted=True,
     ),
-    tags={**tags, "Name": "Open edX"},
+    tags={**tags, "Name": f"Open edX {stack}"},
 )
 
 # Provision EC2 instance
@@ -117,7 +121,7 @@ install_openedx = provisioners.RemoteExec(
         f"wget https://raw.githubusercontent.com/edx/configuration/{OPENEDX_RELEASE}/util/install/generate-passwords.sh -O - | bash",
         f"export OPENEDX_RELEASE={OPENEDX_RELEASE} && wget https://raw.githubusercontent.com/edx/configuration/{OPENEDX_RELEASE}/util/install/native.sh -O - | bash & > install.out",
     ],
-    opts=ResourceOptions(depends_on=[openedx_instance]),
+    opts=ResourceOptions(depends_on=[openedx_instance], parent=openedx_instance),
 )
 
 export("public_ip", openedx_instance.public_ip)
