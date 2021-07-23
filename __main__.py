@@ -81,9 +81,9 @@ if key_name is None:
     key_name = key.key_name
 
 # TODO Make the spot price a config variable
-openedx_instance = ec2.SpotInstanceRequest(
+openedx_instance = ec2.Instance(
     "openedx-instance",
-    spot_price="0.03",
+    # spot_price="0.03",
     instance_type=size,
     vpc_security_group_ids=[security_group.id],
     ami=ami.id,
@@ -117,9 +117,9 @@ install_openedx = provisioners.RemoteExec(
         "echo -e \"EDXAPP_LMS_BASE: '$(curl ipinfo.io/ip)'\nEDXAPP_CMS_BASE: '$(curl ipinfo.io/ip):18010'\" > config.yml",
         'export LC_ALL="en_GB.UTF-8"',
         'export LC_CTYPE="en_GB.UTF-8"',
-        f"wget https://raw.githubusercontent.com/edx/configuration/{OPENEDX_RELEASE}/util/install/ansible-bootstrap.sh -O - | sudo -E bash",
-        f"wget https://raw.githubusercontent.com/edx/configuration/{OPENEDX_RELEASE}/util/install/generate-passwords.sh -O - | bash",
-        f"export OPENEDX_RELEASE={OPENEDX_RELEASE} && wget https://raw.githubusercontent.com/edx/configuration/{OPENEDX_RELEASE}/util/install/native.sh -O - | bash & > install.out",
+        #f"wget https://raw.githubusercontent.com/edx/configuration/{OPENEDX_RELEASE}/util/install/ansible-bootstrap.sh -O - | sudo -E bash",
+        #f"wget https://raw.githubusercontent.com/edx/configuration/{OPENEDX_RELEASE}/util/install/generate-passwords.sh -O - | bash",
+        #f"export OPENEDX_RELEASE={OPENEDX_RELEASE} && wget https://raw.githubusercontent.com/edx/configuration/{OPENEDX_RELEASE}/util/install/native.sh -O - | bash & > install.out",
     ],
     opts=ResourceOptions(depends_on=[openedx_instance], parent=openedx_instance),
 )
